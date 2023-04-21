@@ -78,9 +78,11 @@ class WebSerialBarcodeScanner {
 			productId: 			info.usbProductId || null
 		});
 
+		let buffer = '';
+
 		while (port.readable) {
 			const reader = port.readable.getReader();
-		  
+
 			try {
 				while (true) {
 					const { value, done } = await reader.read();
@@ -90,7 +92,6 @@ class WebSerialBarcodeScanner {
 						break;
 					}
 					if (value) {
-						let buffer = '';
 
 						for (let i = 0; i < value.length; i++) {
 							let character = value[i];
@@ -98,14 +99,19 @@ class WebSerialBarcodeScanner {
 							if (character !== 13) {
 								buffer += String.fromCharCode(character);
 							}
-						}
+							else {
+								this._internal.emitter.emit('barcode', {
+									value:  buffer
+								});
 
-						this._internal.emitter.emit('barcode', {
-							value:  buffer
-						});
+								buffer = '';
+							}
+						}
 					}
 				}
 			} catch (error) {
+				buffer = '';
+
 				console.log(error);
 			}
 		}	
