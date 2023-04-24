@@ -1,4 +1,4 @@
-# webserial-barcode-scanner
+# WebSerialBarcodeScanner
 
 This is an library that allows you to use barcode scanners in serial com port mode using WebSerial. Depending on the model and manufacturer you might first need to scan a special configuration barcode to enable this mode. See the documentation of your barcode scanner for more information.
 
