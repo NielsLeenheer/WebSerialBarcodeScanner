@@ -6,6 +6,7 @@ class WebSerialBarcodeScanner {
 		this._internal = {
 			emitter:    new EventEmitter(),
 			port:     	null,
+			reader:     null,
 			options:	Object.assign({
 				baudRate:		9600,
 				bufferSize:		255,
@@ -58,9 +59,11 @@ class WebSerialBarcodeScanner {
 			return;
 		}
 
-		await this._internal.port.close();
+        this._internal.reader.releaseLock();
+        await this._internal.port.close();
 
-		this._internal.port = null;
+        this._internal.port = null;
+        this._internal.reader = null;
 
 		this._internal.emitter.emit('disconnected');
 	}
@@ -81,18 +84,17 @@ class WebSerialBarcodeScanner {
 		let buffer = '';
 
 		while (port.readable) {
-			const reader = port.readable.getReader();
+            this._internal.reader = port.readable.getReader();
 
 			try {
 				while (true) {
-					const { value, done } = await reader.read();
+                    const { value, done } = await this._internal.reader.read();
 
 					if (done) {
-						reader.releaseLock();
+                        this._internal.reader.releaseLock();
 						break;
 					}
 					if (value) {
-
 						for (let i = 0; i < value.length; i++) {
 							let character = value[i];
 
@@ -111,8 +113,6 @@ class WebSerialBarcodeScanner {
 				}
 			} catch (error) {
 				buffer = '';
-
-				console.log(error);
 			}
 		}	
 	}

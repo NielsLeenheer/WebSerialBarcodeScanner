@@ -15,8 +15,8 @@
     "url": "git+https://github.com/NielsLeenheer/WebSerialBarcodeScanner.git"
   },
   "keywords": [
-    "hid",
-    "webhid",
+    "serial",
+    "webserial",
     "barcode",
     "scanner",
     "honeywell",
