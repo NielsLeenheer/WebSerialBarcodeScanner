@@ -9,6 +9,7 @@ export default [
 		output: {
 			name: 'WebSerialBarcodeScanner',
 			file: 'dist/webserial-barcode-scanner.umd.js',
+			sourcemap: true,
 			format: 'umd'
 		},
 		plugins: [
@@ -22,6 +23,7 @@ export default [
 		input: 'src/main.js',
 		output: { 
 			file: 'dist/webserial-barcode-scanner.esm.js', 
+			sourcemap: true,
 			format: 'es' 
 		},
 		plugins: [
