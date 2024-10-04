@@ -49,6 +49,16 @@ For example, to set a baud rate of `9600`:
         baudRate: 9600
     });
 
+## Symbology 
+
+Usually the barcode scanner does not transmit any information about the symbology of the barcode, just the value of the barcode itself. However the library can make an educated guess based on the content. For example, if it starts with `http` it usually is a QR code. If it is 13 digits, it is usually an EAN13 code and 12 is usually a UPCA. 
+
+By default this behaviour is turned off. If you want this library to guess the symbology you can turn it on:
+
+    const barcodeScanner = new WebSerialBarcodeScanner({
+        guessSymbology: true
+    });
+
 
 ## Connect to a scanner
 

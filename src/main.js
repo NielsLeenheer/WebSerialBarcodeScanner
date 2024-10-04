@@ -1,4 +1,5 @@
 import EventEmitter from './event-emitter.js';
+import SymbologyDetector from './symbology-detector.js';
 
 class WebSerialBarcodeScanner {
 
@@ -13,7 +14,8 @@ class WebSerialBarcodeScanner {
 				dataBits:		8,
 				flowControl:	'none',
 				parity:			'none',
-				stopBits:		1
+				stopBits:		1,
+				guessSymbology: false,
 			}, options)
 		};
 
@@ -102,9 +104,22 @@ class WebSerialBarcodeScanner {
 								buffer += String.fromCharCode(character);
 							}
 							else {
-								this._internal.emitter.emit('barcode', {
-									value:  buffer
-								});
+								let data = {
+									value: buffer
+								};
+
+								/* Try to guess the symbology */
+
+								if (this.options.guessSymbology) {
+									let symbology = SymbologyDetector.detect(buffer);
+					
+									if (symbology) {
+										data.symbology = symbology;
+										data.guess = true;
+									}
+								}
+
+								this._internal.emitter.emit('barcode', data);
 
 								buffer = '';
 							}
