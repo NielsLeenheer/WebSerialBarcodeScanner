@@ -1,5 +1,5 @@
 {
-  "name": "webserial-barcode-scanner",
+  "name": "@point-of-sale/webserial-barcode-scanner",
   "version": "1.0.0",
   "type": "module",
   "exports": {
