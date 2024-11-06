@@ -1,13 +1,13 @@
 {
   "name": "@point-of-sale/webserial-barcode-scanner",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "exports": {
-      "browser": {
-          "import": "./dist/webserial-barcode-scanner.esm.js",
-          "require": "./dist/webserial-barcode-scanner.umd.js",
-          "script": "./dist/webserial-barcode-scanner.umd.js"
-      }
+    "browser": {
+      "import": "./dist/webserial-barcode-scanner.esm.js",
+      "require": "./dist/webserial-barcode-scanner.umd.js",
+      "script": "./dist/webserial-barcode-scanner.umd.js"
+    }
   },
   "module": "src/main.js",
   "repository": {
@@ -42,6 +42,6 @@
     "dist"
   ],
   "dependencies": {
-    "@point-of-sale/barcode-parser": "^1.0.0"
+    "@point-of-sale/barcode-parser": "^1.0.1"
   }
 }
