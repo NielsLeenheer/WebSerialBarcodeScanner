@@ -1,27 +1,35 @@
 import EventEmitter from './event-emitter.js';
 import { Aim, GS1, Detector } from '@point-of-sale/barcode-parser';
 
+const END_OF_TRANSMISSION_TIMEOUT = 300;
+
 class WebSerialBarcodeScanner {
 
+    #options;
+    #internal;
+	
 	constructor(options) {
-		this._internal = {
-			emitter:    new EventEmitter(),
-			port:     	null,
-			reader:     null,
-			options:	Object.assign({
-				baudRate:		9600,
-				bufferSize:		255,
-				dataBits:		8,
-				flowControl:	'none',
-				parity:			'none',
-				stopBits:		1,
-				guessSymbology: false,
-			}, options)
+		this.#options = Object.assign({
+			baudRate:		9600,
+			bufferSize:		255,
+			dataBits:		8,
+			flowControl:	'none',
+			parity:			'none',
+			stopBits:		1,
+			guessSymbology: false,
+			allowedSymbologies:	[],
+		}, options);
+
+		this.#internal = {
+			emitter:    	new EventEmitter(),
+			port:     		null,
+			reader:     	null,
+			timeout:    	null
 		};
 
 		navigator.serial.addEventListener('disconnect', event => {
-			if (this._internal.port == event.target) {
-				this._internal.emitter.emit('disconnected');
+			if (this.#internal.port == event.target) {
+				this.#internal.emitter.emit('disconnected');
 			}
 		});
 	}
@@ -57,83 +65,130 @@ class WebSerialBarcodeScanner {
 	}
 
 	async disconnect() {
-		if (!this._internal.port) {
+		if (!this.#internal.port) {
 			return;
 		}
 
-        this._internal.reader.releaseLock();
-        await this._internal.port.close();
+        this.#internal.reader.releaseLock();
+        await this.#internal.port.close();
 
-        this._internal.port = null;
-        this._internal.reader = null;
-
-		this._internal.emitter.emit('disconnected');
+        this.#internal.port = null;
+        this.#internal.reader = null;
+		this.#internal.timeout = null;
+		this.#internal.emitter.emit('disconnected');
 	}
 
 	async open(port) {
-		this._internal.port = port;
+		this.#internal.port = port;
 
-		await this._internal.port.open(this._internal.options);
+		await this.#internal.port.open(this.#options);
 
-		let info = this._internal.port.getInfo();
+		let info = this.#internal.port.getInfo();
 
-		this._internal.emitter.emit('connected', {
+		this.#internal.emitter.emit('connected', {
 			type:				'serial',
 			vendorId: 			info.usbVendorId || null,
 			productId: 			info.usbProductId || null
 		});
 
-		let buffer = '';
+		let buffer = [];
 
 		while (port.readable) {
-            this._internal.reader = port.readable.getReader();
+            this.#internal.reader = port.readable.getReader();
 
 			try {
 				while (true) {
-                    const { value, done } = await this._internal.reader.read();
+                    const { value, done } = await this.#internal.reader.read();
+
+					/* Cancel any pending timeouts */
+
+					if (this.#internal.timeout) {
+						clearTimeout(this.#internal.timeout);
+						this.#internal.timeout = null;
+					}
 
 					if (done) {
-                        this._internal.reader.releaseLock();
+                        this.#internal.reader.releaseLock();
 						break;
 					}
+
 					if (value) {
-						for (let i = 0; i < value.length; i++) {
-							let character = value[i];
-
-							if (character !== 13) {
-								buffer += String.fromCharCode(character);
-							}
-							else {
-								let data = {
-									value: buffer
-								};
-
-								/* Try to guess the symbology */
-
-								if (this.options.guessSymbology) {
-									let symbology = SymbologyDetector.detect(buffer);
-					
-									if (symbology) {
-										data.symbology = symbology;
-										data.guess = true;
-									}
-								}
-
-								this._internal.emitter.emit('barcode', data);
-
-								buffer = '';
-							}
-						}
+						buffer.push(...value);
 					}
+
+					/* Set a timeout to parse the buffer if no new data is received */
+
+					this.#internal.timeout = setTimeout(() => {
+						this.#parse(buffer);
+						buffer = [];
+					}, END_OF_TRANSMISSION_TIMEOUT);
 				}
 			} catch (error) {
-				buffer = '';
+				console.log('error', error);
+				buffer = [];
 			}
 		}	
 	}
 
+	#parse(buffer) {
+		let result = {
+			value: String.fromCharCode.apply(null, buffer),
+			bytes: [
+				new Uint8Array(buffer)
+			]
+		};
+
+		/* If the last character of value is a new line, remove it */
+
+		if (result.value.endsWith('\n')) {
+			result.value = result.value.slice(0, -1);
+		}
+
+		if (result.value.endsWith('\r')) {
+			result.value = result.value.slice(0, -1);
+		}
+
+		/* Check if we have and AIM identifier */
+
+		if (result.value.startsWith(']')) {
+			let aim = Aim.decode(result.value.substr(0, 3), result.value.substr(3));
+
+			if (aim) {
+				result.aim = result.value.substr(0, 3);
+				result.symbology = aim;
+			}
+
+			result.value = result.value.substr(3);
+		}
+
+		/* Otherwise try to guess the symbology */
+
+		else if (this.#options.guessSymbology) {
+			let detected = Detector.detect(result.value);
+
+			if (detected) {
+				result = Object.assign(result, detected);
+			}
+		}
+
+		/* Decode GS1 data */
+
+		let parsed = GS1.parse(result);
+		if (parsed) {
+			result.data = parsed;
+		}
+		
+		/* Emit the barcode event */
+
+		if (this.#options.allowedSymbologies.length === 0 ||
+			this.#options.allowedSymbologies.includes(result.symbology)) 
+		{
+			this.#internal.emitter.emit('barcode', result);
+		}
+	}
+
 	addEventListener(n, f) {
-		this._internal.emitter.on(n, f);
+		this.#internal.emitter.on(n, f);
 	}
 }
 
