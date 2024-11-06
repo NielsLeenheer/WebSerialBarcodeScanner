@@ -1,5 +1,5 @@
 import EventEmitter from './event-emitter.js';
-import SymbologyDetector from './symbology-detector.js';
+import { Aim, GS1, Detector } from '@point-of-sale/barcode-parser';
 
 class WebSerialBarcodeScanner {
 

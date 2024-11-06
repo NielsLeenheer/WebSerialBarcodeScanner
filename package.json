@@ -40,5 +40,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@point-of-sale/barcode-parser": "^1.0.0"
+  }
 }
